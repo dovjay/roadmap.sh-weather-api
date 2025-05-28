@@ -1,9 +1,13 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type WeatherResponse struct {
@@ -17,6 +21,12 @@ type Day struct {
 	Temp        float64 `json:"temp"`
 	Description string  `json:"description"`
 	Conditions  string  `json:"conditions"`
+}
+
+var rdb *redis.Client
+
+func SetRedisClient(client *redis.Client) {
+	rdb = client
 }
 
 func GetWeather(apiKey, location string) (WeatherResponse, error) {
@@ -39,4 +49,29 @@ func GetWeather(apiKey, location string) (WeatherResponse, error) {
 	}
 
 	return result, nil
+}
+
+func GetWeatherWithCache(apiKey, location string) (WeatherResponse, error) {
+	var cached WeatherResponse
+	ctx := context.Background()
+
+	val, err := rdb.Get(ctx, location).Result()
+	if err == nil {
+		err := json.Unmarshal([]byte(val), &cached)
+		if err == nil {
+			return cached, nil
+		}
+	}
+
+	fresh, err := GetWeather(apiKey, location)
+	if err != nil {
+		return fresh, err
+	}
+
+	jsonData, err := json.Marshal(fresh)
+	if err == nil {
+		rdb.Set(ctx, location, jsonData, 10*time.Minute)
+	}
+
+	return fresh, nil
 }

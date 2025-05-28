@@ -6,10 +6,21 @@ import (
 
 	"weather-api/internal/config"
 	"weather-api/internal/handler"
+	"weather-api/internal/service"
+
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
 	cfg := config.Load()
+
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       0,
+	})
+
+	service.SetRedisClient(rdb)
 
 	http.HandleFunc("/api/weather", handler.WeatherHandler(cfg))
 

@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	rateLimit      = 2
+	rateLimit      = 10
 	rateLimitStore = make(map[string][]time.Time)
 	mu             sync.Mutex
 )
@@ -53,7 +53,7 @@ func WeatherHandler(cfg config.Config) http.HandlerFunc {
 			return
 		}
 
-		data, err := service.GetWeather(cfg.APIKey, location)
+		data, err := service.GetWeatherWithCache(cfg.APIKey, location)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
